@@ -222,7 +222,7 @@ class EmailHandler:
 
         try:
 
-            self.msg['To'] = ','.join(to)
+            self.msg['To'] = ', '.join(to)
             self.msg['Subject'] = subject
             self.msg['From'] = self.address
             self.msg.attach(MIMEText(message + '\n', 'plain'))  # Attach Body
