@@ -1,10 +1,10 @@
 
+# Email Handler
 import os
 import atexit
+import smtplib
 import logging
 
-# Email Handler
-import smtplib
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
@@ -29,7 +29,7 @@ class EmailHandler:
             inline:         Boolean     -- Include the attachment inline
             delete:         Boolean     -- Delete the attachment file after including it into the email
             newline:        Boolean     -- Include a Line Break after the attachment
-            newlienumber    Int         -- Number of new line to include after attachment
+            newlinenumber    Int         -- Number of new line to include after attachment
             textformat:     Str         -- [plain | html]
         """
 
@@ -83,38 +83,32 @@ class EmailHandler:
         """
         self.addAttachments(attachment)
 
-    def updateOptions(self, option_dict):
+    def __updateOptions__(self, option_dict):
         """ Factory Method called when Default Options dict needs update """
         out = self.default_options.copy()
         out.update(option_dict)
         return out
 
-    def attachMessage(self, text, **kwargs):
-        """ Wrapper For adding Message"""
-        input_dict = {'type': 'text', 'input': text}
-        input_dict.update(kwargs)
-        self.addAttachments(input_dict)
-
-    def __newLine(self, n=2):
+    def __newLine__(self, n=2):
         return MIMEText('\n'*n)
 
-    def __prepareText(self, dict_input):
+    def __prepareText__(self, dict_input):
 
         text = dict_input.get('input')
         options = dict_input.get('options', {})
-        options = self.updateOptions(options)
+        options = self.__updateOptions__(options)
 
         self.attachments.append(MIMEText(text, options.get('textformat', 'plain')))
 
         # Options
         if options.get('newline'):
-            self.attachments.append(self.__newLine(options.get('newlinenumber')))
+            self.attachments.append(self.__newLine__(options.get('newlinenumber')))
 
-    def __prepareCsv(self, dict_input):
+    def __prepareCsv__(self, dict_input):
 
         path = dict_input.get('input')
         options = dict_input.get('options', {})
-        options = self.updateOptions(options)
+        options = self.__updateOptions__(options)
 
         part = MIMEBase('application', 'octet-stream')
 
@@ -128,26 +122,26 @@ class EmailHandler:
             os.remove(path)
 
         if options.get('newline'):
-            self.attachments.append(self.__newLine(options.get('newlinenumber')))
+            self.attachments.append(self.__newLine__(options.get('newlinenumber')))
 
     def __prepareDataFrame(self, dict_input):
 
         _df = dict_input.get('input')
         options = dict_input.get('options', {})
-        options = self.updateOptions(options)
+        options = self.__updateOptions__(options)
 
         self.attachments.append(MIMEText(_df.to_html(), 'html'))
 
         if options.get('newline'):
-            self.attachments.append(self.__newLine(options.get('newlinenumber')))
+            self.attachments.append(self.__newLine__(options.get('newlinenumber')))
 
-    def __prepareImage(self, dict_input):
+    def __prepareImage__(self, dict_input):
 
         path = dict_input.get('input')
         name = path.split('/')[-1][:-4]
         extension = path.split('/')[-1][-3:]
         options = dict_input.get('options', {})
-        options = self.updateOptions(options)
+        options = self.__updateOptions__(options)
 
         # Add HTML Tag for image
         self.attachments.append(MIMEText('<img src="cid:{}">'.format(name), 'html'))
@@ -167,12 +161,18 @@ class EmailHandler:
 
             # Only Apply new Line if attachment is In-Line
             if options.get('newline'):
-                self.attachments.append(self.__newLine(options.get('newlinenumber')))
+                self.attachments.append(self.__newLine__(options.get('newlinenumber')))
 
         if options.get('delete'):
             os.remove(path)
 
         self.attachments.append(file)
+
+    def attachMessage(self, text, **kwargs):
+        """ Wrapper For adding Message"""
+        input_dict = {'type': 'text', 'input': text}
+        input_dict.update(kwargs)
+        self.addAttachments(input_dict)
 
     def addAttachments(self, attachments):
         """
@@ -195,9 +195,9 @@ class EmailHandler:
         for attachment in attachments:
 
             success = {
-                'csv': self.__prepareCsv,
-                'text': self.__prepareText,
-                'image': self.__prepareImage,
+                'csv': self.__prepareCsv__,
+                'text': self.__prepareText__,
+                'image': self.__prepareImage__,
                 'dataframe': self.__prepareDataFrame
             }.get(attachment.get('type'), False)
 

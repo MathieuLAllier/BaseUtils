@@ -14,3 +14,7 @@ def batch(iterable, size):
     while True:
         batchiter = islice(source_iter, size)
         yield chain([batchiter.__next__()], batchiter)
+
+
+def flatten(iterable):
+    return [val for sublist in iterable for val in sublist]
