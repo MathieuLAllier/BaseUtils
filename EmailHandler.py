@@ -29,7 +29,7 @@ class EmailHandler:
             inline:         Boolean     -- Include the attachment inline
             delete:         Boolean     -- Delete the attachment file after including it into the email
             newline:        Boolean     -- Include a Line Break after the attachment
-            newlinenumber    Int         -- Number of new line to include after attachment
+            newlinenumber   Int         -- Number of new line to include after attachment
             textformat:     Str         -- [plain | html]
         """
 
@@ -50,7 +50,7 @@ class EmailHandler:
 
         try:
             # Server Connection
-            self.server = smtplib.SMTP(server)
+            self.server = smtplib.SMTP(server, kwargs.get('timeout', 600))
             atexit.register(lambda: self.server.quit())  # Closing SMTP Connection at script exit
 
             if self.server != 'localhost':
