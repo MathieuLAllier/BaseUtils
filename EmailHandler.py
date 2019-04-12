@@ -10,6 +10,7 @@ from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
 
 
 class EmailHandler:
@@ -18,10 +19,10 @@ class EmailHandler:
 
     def __init__(self, address='', password='', server='smtp.gmail.com:587', **kwargs):
         """
-        :param address:     String  --   Email Address to use as sender (localhost can be used if enabled)
-        :param password:    String  --   Email Address Password
-        :param server:      String  --   Server Type
-        :param kwargs:      Dict    --   Default Options modifiers
+        :param address:     String      --   Email Address to use as sender (localhost can be used if enabled)
+        :param password:    String      --   Email Address Password
+        :param server:      String      --   Server Type
+        :param kwargs:      Dict        --   Default Options modifiers
 
         Creates An EmailHandler Instance capable of handling Mail notifications through smtp connection
 
@@ -124,7 +125,7 @@ class EmailHandler:
         if options.get('newline'):
             self.attachments.append(self.__newLine__(options.get('newlinenumber')))
 
-    def __prepareDataFrame(self, dict_input):
+    def __prepareDataFrame__(self, dict_input):
 
         _df = dict_input.get('input')
         options = dict_input.get('options', {})
@@ -134,6 +135,27 @@ class EmailHandler:
 
         if options.get('newline'):
             self.attachments.append(self.__newLine__(options.get('newlinenumber')))
+
+    def __preparePdf__(self, dict_input):
+        path = dict_input.get('input')
+        name = path.split('/')[-1][:-3]
+        options = dict_input.get('options', {})
+        options = self.__updateOptions__(options)
+
+        try:
+            with open(path, 'rb') as file:
+                file = MIMEApplication(file.read(), _subtype='pdf')
+                file.add_header('content-disposition', 'attachment', filename=name)
+
+            self.attachments.append(file)
+
+            if options.get('delete'):
+                os.remove(path)
+
+        except FileNotFoundError:
+            self.logger.error('PDF File on path {} not found'.format(path))
+            return
+
 
     def __prepareImage__(self, dict_input):
 
@@ -196,9 +218,10 @@ class EmailHandler:
 
             success = {
                 'csv': self.__prepareCsv__,
+                'pdf': self.__preparePdf__,
                 'text': self.__prepareText__,
                 'image': self.__prepareImage__,
-                'dataframe': self.__prepareDataFrame
+                'dataframe': self.__prepareDataFrame__
             }.get(attachment.get('type'), False)
 
             if success:
@@ -258,7 +281,6 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--password', required=True)
     args = parser.parse_args()
 
-    df = pd.DataFrame({'A': [1,2,3], 'B': [2,3,4]})
     df = pd.DataFrame({'A': [1,2,3], 'B': [2,3,4]})
     # plt.plot([1,2,3], [3,4,5])
     # plt.savefig('test.png')
