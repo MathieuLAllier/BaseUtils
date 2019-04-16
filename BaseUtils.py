@@ -1,5 +1,6 @@
 from itertools import chain, islice
 from collections.abc import Iterable
+from collections import Mapping
 
 
 def batch(iterable, size):
@@ -14,6 +15,21 @@ def batch(iterable, size):
     while True:
         batchiter = islice(source_iter, size)
         yield chain([batchiter.__next__()], batchiter)
+
+
+def complex_update(source, overrides):
+    """
+    https://stackoverflow.com/a/30655448/6395612
+    :param source:      Dictionary      -- Source Dict to Update
+    :param overrides:   Dictionary      -- New Dict
+    :return: Updated Dictionary
+    """
+    for key, value in overrides.items():
+        if isinstance(value, Mapping) and value:
+            source[key] = complex_update(source.get(key, {}), value)
+        else:
+            source[key] = overrides[key]
+    return source
 
 
 def flatten(iterable):
