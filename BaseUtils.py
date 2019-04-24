@@ -1,6 +1,8 @@
+# Collection of Useful Scripting Functions
+
+from collections import Mapping
 from itertools import chain, islice
 from collections.abc import Iterable
-from collections import Mapping
 
 
 def batch(iterable, size):

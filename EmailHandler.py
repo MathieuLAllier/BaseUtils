@@ -1,5 +1,7 @@
+
 # Email Handler
 import os
+import json
 import atexit
 import smtplib
 import logging
@@ -69,6 +71,11 @@ class EmailHandler:
         except Exception as e:
             self.logger.critical('Unknown Error: {}'.format(e))
             raise
+
+    @classmethod
+    def from_json(cls, path, **kwargs):
+        creds = json.loads(path)
+        return cls(**creds, **kwargs)
 
     @property
     def option(self):
