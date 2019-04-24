@@ -1,4 +1,3 @@
-
 # Email Handler
 import os
 import atexit
@@ -15,14 +14,18 @@ from email.mime.application import MIMEApplication
 
 class EmailHandler:
 
-    """ SMTP + MIMEMultipart Wrapper for Handling Emails Sending """
+    """
+        SMTP + MIMEMultipart Wrapper for Handling Emails Sending
+
+        **** This Application is NOT THREAD SAFE. Please Use Thread.Lock when Building Email ****
+    """
 
     def __init__(self, address='', password='', server='smtp.gmail.com:587', **kwargs):
         """
-        :param address:     String      --   Email Address to use as sender (localhost can be used if enabled)
-        :param password:    String      --   Email Address Password
-        :param server:      String      --   Server Type
-        :param kwargs:      Dict        --   Default Options modifiers
+        :param address:     String  --   Email Address to use as sender (localhost can be used if enabled)
+        :param password:    String  --   Email Address Password
+        :param server:      String  --   Server Type
+        :param kwargs:      Dict    --   Default Options modifiers & Other
 
         Creates An EmailHandler Instance capable of handling Mail notifications through smtp connection
 
@@ -30,7 +33,7 @@ class EmailHandler:
             inline:         Boolean     -- Include the attachment inline
             delete:         Boolean     -- Delete the attachment file after including it into the email
             newline:        Boolean     -- Include a Line Break after the attachment
-            newlinenumber   Int         -- Number of new line to include after attachment
+            newlinenumber    Int         -- Number of new line to include after attachment
             textformat:     Str         -- [plain | html]
         """
 
@@ -47,11 +50,11 @@ class EmailHandler:
         self.address = address
         self.msg = MIMEMultipart()
 
-        self.default_options.update(kwargs)  # Changing Default Options
+        self.default_options = {k: kwargs.pop(k, v) for k, v in self.default_options.items()}  # Change Default Options
 
         try:
             # Server Connection
-            self.server = smtplib.SMTP(server, kwargs.get('timeout', 600))
+            self.server = smtplib.SMTP(server, timeout=kwargs.pop('timeout', 600))
             atexit.register(lambda: self.server.quit())  # Closing SMTP Connection at script exit
 
             if self.server != 'localhost':
@@ -64,8 +67,19 @@ class EmailHandler:
             raise
 
         except Exception as e:
-            self.logger.error('Unknown Error: {}'.format(e))
+            self.logger.critical('Unknown Error: {}'.format(e))
             raise
+
+    @property
+    def option(self):
+        return self.default_options
+
+    @property
+    def options(self):
+        return self.default_options
+
+    def __str__(self):
+        return 'Email Handler Defaults Options: {}'.format(self.default_options)
 
     def __call__(self, text, **kwargs):
         """
@@ -91,6 +105,7 @@ class EmailHandler:
         return out
 
     def __newLine__(self, n=2):
+        # Add Blank Line between attachments
         return MIMEText('\n'*n)
 
     def __prepareText__(self, dict_input):
@@ -125,7 +140,7 @@ class EmailHandler:
         if options.get('newline'):
             self.attachments.append(self.__newLine__(options.get('newlinenumber')))
 
-    def __prepareDataFrame__(self, dict_input):
+    def __prepareDataFrame(self, dict_input):
 
         _df = dict_input.get('input')
         options = dict_input.get('options', {})
@@ -135,27 +150,6 @@ class EmailHandler:
 
         if options.get('newline'):
             self.attachments.append(self.__newLine__(options.get('newlinenumber')))
-
-    def __preparePdf__(self, dict_input):
-        path = dict_input.get('input')
-        name = path.split('/')[-1][:-3]
-        options = dict_input.get('options', {})
-        options = self.__updateOptions__(options)
-
-        try:
-            with open(path, 'rb') as file:
-                file = MIMEApplication(file.read(), _subtype='pdf')
-                file.add_header('content-disposition', 'attachment', filename=name)
-
-            self.attachments.append(file)
-
-            if options.get('delete'):
-                os.remove(path)
-
-        except FileNotFoundError:
-            self.logger.error('PDF File on path {} not found'.format(path))
-            return
-
 
     def __prepareImage__(self, dict_input):
 
@@ -190,6 +184,26 @@ class EmailHandler:
 
         self.attachments.append(file)
 
+    def __preparePdf__(self, dict_input):
+        path = dict_input.get('input')
+        name = path.split('/')[-1][:-3]
+        options = dict_input.get('options', {})
+        options = self.__updateOptions__(options)
+
+        try:
+            with open(path, 'rb') as file:
+                file = MIMEApplication(file.read(), _subtype='pdf')
+                file.add_header('content-disposition', 'attachment', filename=name)
+
+            self.attachments.append(file)
+
+            if options.get('delete'):
+                os.remove(path)
+
+        except FileNotFoundError:
+            self.logger.error('PDF File on path {} not found'.format(path))
+            return
+
     def attachMessage(self, text, **kwargs):
         """ Wrapper For adding Message"""
         input_dict = {'type': 'text', 'input': text}
@@ -221,22 +235,24 @@ class EmailHandler:
                 'pdf': self.__preparePdf__,
                 'text': self.__prepareText__,
                 'image': self.__prepareImage__,
-                'dataframe': self.__prepareDataFrame__
+                'dataframe': self.__prepareDataFrame
             }.get(attachment.get('type'), False)
 
             if success:
                 success(attachment)
                 continue
 
+            # Else Log Error
             self.logger.error(
                 '{} has not yet been implemented, please ask Owner for help'.format(attachment.get('type')))
 
-    def sendMessage(self, to, subject='', message='', signature=''):
+    def sendMessage(self, to, subject='', message='', signature='', cache=False):
         """
         :param to:          List(String) | String -- Receivers Email addresses
         :param subject:     String                -- Email Subject
         :param message:     String                -- Body Message of email
         :param signature:   String                -- Signature of email
+        :param cache:       Boolean               -- True to Cache Attachments
 
         Send the Email and reinitialize the msg object
         """
@@ -256,18 +272,19 @@ class EmailHandler:
 
             try:
                 self.server.send_message(self.msg)
+                self.msg = MIMEMultipart()
                 self.logger.info('Message Successfully sent to {}'.format(to))
             except Exception as e:
                 self.logger.critical('Sending Message Failed with error: {}'.format(e))
 
             # Reinitialize
-            self.msg = MIMEMultipart()
-            self.attachments = []
+            if not cache:
+                self.attachments = []
 
         except Exception as e:
             self.logger.critical('SendMessage Failed with error message: {}'.format(e))
 
-            
+
 if __name__ == '__main__':
     # Tests
     import argparse
@@ -282,24 +299,28 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     df = pd.DataFrame({'A': [1,2,3], 'B': [2,3,4]})
+    df = pd.DataFrame({'A': [1,2,3], 'B': [2,3,4]})
     # plt.plot([1,2,3], [3,4,5])
     # plt.savefig('test.png')
 
     mail = EmailHandler(args.email, args.password)
 
-    mail + {
-        'type': 'text',
-        'input': 'I like turtles'
-    }
+    # mail + {
+    #     'type': 'text',
+    #     'input': 'I like turtles'
+    # }
+    #
+    # mail + {'type': 'dataframe', 'input': df}
+    #
+    # mail + {
+    #     'type': 'image',
+    #     'input': '/Users/mathieulallier/QuanticMind/data-science/PyLib/QmDB/QmDB/test.png',
+    #     'options': {'inline': True}
+    # }
 
-    mail + {'type': 'dataframe', 'input': df}
-
-    mail + {
-        'type': 'image',
-        'input': '/Users/mathieulallier/QuanticMind/data-science/PyLib/QmDB/QmDB/test.png',
-        'options': {'inline': True}
-    }
 
     mail.attachMessage('salut comment ca va')
+    print(mail.option)
+    print(mail)
 
-    mail.sendMessage(args.email, 'test2', 'message', 'signature')
+    # mail.sendMessage(args.email, 'test2', 'message', 'signature')
