@@ -147,7 +147,7 @@ class EmailHandler:
         if options.get('newline'):
             self.attachments.append(self.__newLine__(options.get('newlinenumber')))
 
-    def __prepareDataFrame(self, dict_input):
+    def __prepareDataFrame__(self, dict_input):
 
         _df = dict_input.get('input')
         options = dict_input.get('options', {})
@@ -242,7 +242,7 @@ class EmailHandler:
                 'pdf': self.__preparePdf__,
                 'text': self.__prepareText__,
                 'image': self.__prepareImage__,
-                'dataframe': self.__prepareDataFrame
+                'dataframe': self.__prepareDataFrame__
             }.get(attachment.get('type'), False)
 
             if success:

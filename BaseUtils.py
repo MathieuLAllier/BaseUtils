@@ -1,8 +1,7 @@
 # Collection of Useful Scripting Functions
 
-from collections import Mapping
 from itertools import chain, islice
-from collections.abc import Iterable
+from collections.abc import Mapping, Iterable
 
 
 def batch(iterable, size):
@@ -22,9 +21,12 @@ def batch(iterable, size):
 def complex_update(source, overrides):
     """
     https://stackoverflow.com/a/30655448/6395612
+
     :param source:      Dictionary      -- Source Dict to Update
     :param overrides:   Dictionary      -- New Dict
     :return: Updated Dictionary
+
+    This Function will update nested dictionary
     """
     for key, value in overrides.items():
         if isinstance(value, Mapping) and value:
