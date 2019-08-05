@@ -1,7 +1,12 @@
 # Collection of Useful Scripting Functions
 
-from itertools import chain, islice
+from itertools import chain, islice, groupby
 from collections.abc import Mapping, Iterable
+
+
+def sort_and_group(iterable, sort_function):
+    """ Sort Before Group BY"""
+    return groupby(sorted(iterable, key=sort_function), key=sort_function)
 
 
 def batch(iterable, size):
