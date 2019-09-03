@@ -1,7 +1,22 @@
 # Collection of Useful Scripting Functions
 
+import functools
 from itertools import chain, islice, groupby
 from collections.abc import Mapping, Iterable
+
+
+def default_kwargs(**defaultKwargs):
+    """ https://stackoverflow.com/a/50107777/6395612 """
+
+    def actual_decorator(fn):
+
+        @functools.wraps(fn)
+        def inner(*args, **kwargs):
+            defaultKwargs.update(kwargs)
+            return fn(*args, **defaultKwargs)
+
+        return inner
+    return actual_decorator
 
 
 def sort_and_group(iterable, sort_function):
